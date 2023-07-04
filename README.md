@@ -11,6 +11,7 @@ This repository contains all the build artifacts necessary to build an embedding
  * Originally built using NASM 2.15.05 and Strawberry Pearl 5.30.1.1.
 * Read the remarks (REM lines) in build-x64.bat
 * Use build-x64.bat to successfully build everything.
+* Need build both x86 and x64(libffi openssl)
 
 ## Artifacts
 * https://doi.org/10.5281/zenodo.4638251
