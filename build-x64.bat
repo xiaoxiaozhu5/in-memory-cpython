@@ -1,3 +1,4 @@
+@echo off
 REM x64
 REM Dependencies: NASM for openssl, Perl to run Configure
 REM first, extract the tar gz files
@@ -13,21 +14,33 @@ REM generate zip of Python's PCBuild\amd64
 REM msbuild Pythoncore.dll <- done
 REM 
 
-\Python38\python scripts\untar.py zlib-1.2.11.tar.gz
-\Python38\python scripts\untar.py openssl-1.1.1g.tar.gz
-\Python38\python scripts\untar.py Python-3.8.2.tgz
+python scripts\untar.py zlib-1.2.11.tar.gz
+python scripts\untar.py openssl-1.1.1g.tar.gz
+python scripts\untar.py Python-3.8.2.tgz
 
 copy zlib-patch\zlibstat.vcxproj zlib-1.2.11\contrib\vstudio\vc14
 
 REM Build zlib static library
 REM
 pushd zlib-1.2.11\contrib\vstudio\vc14
-msbuild zlibstat.vcxproj -p:Configuration=ReleaseWithoutAsm -t:Clean
-msbuild zlibstat.vcxproj -p:Configuration=ReleaseWithoutAsm
+msbuild zlibstat.vcxproj -p:Configuration=ReleaseWithoutAsm -p:Platform=x64 -t:Clean
+msbuild zlibstat.vcxproj -p:Configuration=ReleaseWithoutAsm -p:Platform=x64
+
+msbuild zlibstat.vcxproj -p:Configuration=ReleaseWithoutAsm -p:Platform=x86 -t:Clean
+msbuild zlibstat.vcxproj -p:Configuration=ReleaseWithoutAsm -p:Platform=x86
 popd
 
 REM Build openssl static library
 REM
+mkdir Python-3.8.2\externals\openssl-bin-1.1.1g
+mkdir Python-3.8.2\externals\openssl-bin-1.1.1g\amd64
+mkdir Python-3.8.2\externals\openssl-bin-1.1.1g\amd64\include
+mkdir Python-3.8.2\externals\openssl-bin-1.1.1g\amd64\include\openssl
+
+mkdir Python-3.8.2\externals\openssl-bin-1.1.1g\win32
+mkdir Python-3.8.2\externals\openssl-bin-1.1.1g\win32\include
+mkdir Python-3.8.2\externals\openssl-bin-1.1.1g\win32\include\openssl
+
 pushd openssl-1.1.1g
 set path=%path%;c:\nasm
 set path=%path%;C:\Strawberry\perl\bin
@@ -35,9 +48,29 @@ perl Configure no-zlib-dynamic no-shared no-zlib VC-WIN64A --with-zlib-include=z
 nmake clean
 nmake
 popd
+copy openssl-1.1.1g\libcrypto.lib Python-3.8.2\externals\openssl-bin-1.1.1g\amd64
+copy openssl-1.1.1g\libssl.lib Python-3.8.2\externals\openssl-bin-1.1.1g\amd64
+xcopy /s openssl-1.1.1g\include\openssl Python-3.8.2\externals\openssl-bin-1.1.1g\amd64\include\openssl
+copy openssl-1.1.1g\ms\applink.c Python-3.8.2\externals\openssl-bin-1.1.1g\amd64\include
+
+pushd openssl-1.1.1g
+perl Configure no-zlib-dynamic no-shared no-zlib VC-WIN32 --with-zlib-include=zlib-1.2.11 --with-zlib-lib=zlib-1.2.11\contrib\vstudio\vc14\x86\ZlibStatReleaseWithoutAsm\zlibstat.lib -DOPENSSL_USE_NODELETE
+nmake clean
+nmake
+popd
+
+copy openssl-1.1.1g\libcrypto.lib Python-3.8.2\externals\openssl-bin-1.1.1g\win32
+copy openssl-1.1.1g\libssl.lib Python-3.8.2\externals\openssl-bin-1.1.1g\win32
+xcopy /s openssl-1.1.1g\include\openssl Python-3.8.2\externals\openssl-bin-1.1.1g\win32\include\openssl
+copy openssl-1.1.1g\ms\applink.c Python-3.8.2\externals\openssl-bin-1.1.1g\win32\include
+
+
+pause
+GOTO QUIT
 
 REM for win32 use VC-WIN32 instead of VC-WIN64A above.
 
+@echo on
 REM ffi
 pushd libffi\msvc_build\amd64
 msbuild Ffi_staticLib.vcxproj -p:Configuration=Release -t:Clean
@@ -46,8 +79,8 @@ popd
 
 REM do this before running build.bat as it produces __pycache__
 xcopy /S /Y Python-3.8.2\Lib scripts\generated\Lib
-\Python38\python.exe scripts\zip_folder.py scripts\generated\Lib scripts\generated\python382_lib.zip
-\Python38\python scripts\xxd.py python38_lib scripts\generated\python382_lib.zip > Python-3.8.2\Python\cba_python38_lib.c
+python.exe scripts\zip_folder.py scripts\generated\Lib scripts\generated\python382_lib.zip
+python.exe scripts\xxd.py python38_lib scripts\generated\python382_lib.zip > Python-3.8.2\Python\cba_python38_lib.c
 
 REM call to get externs that we will update
 pushd Python-3.8.2\PCbuild
@@ -82,7 +115,9 @@ msbuild Python-3.8.2\PCbuild\pcbuild.sln
 REM generate C array for pyd files.
 copy /Y Python-3.8.2\PCbuild\amd64\*.pyd scripts\generated\pyd\win64
 
-\Python38\python.exe scripts\zip_folder.py scripts\generated\pyd\win64 scripts\generated\python382_pyd_win64.zip
-\Python38\python scripts\xxd.py python38_pyd_win64 scripts\generated\python382_pyd_win64.zip > Python-3.8.2\Python\cba_python38_pyd_win64.c
+python.exe scripts\zip_folder.py scripts\generated\pyd\win64 scripts\generated\python382_pyd_win64.zip
+python.exe scripts\xxd.py python38_pyd_win64 scripts\generated\python382_pyd_win64.zip > Python-3.8.2\Python\cba_python38_pyd_win64.c
 
 msbuild Python-3.8.2\PCbuild\pythoncore.vcxproj -p:Configuration=Release
+
+:QUIT

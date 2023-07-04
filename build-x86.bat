@@ -14,7 +14,7 @@ nmake clean
 nmake
 popd
 
-% for win32 use VC-WIN32 instead of VC-WIN64A above.
+REM for win32 use VC-WIN32 instead of VC-WIN64A above.
 
 REM ffi
 pushd libffi\msvc_build\amd64
